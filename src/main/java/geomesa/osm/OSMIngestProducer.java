@@ -1,10 +1,10 @@
 package geomesa.osm;
 
+import com.google.common.base.Joiner;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 import org.apache.commons.cli.*;
-import org.apache.hadoop.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -68,12 +68,12 @@ public class OSMIngestProducer {
 
                 agglomeratedData.add(x);
                 if (agglomeratedData.size() == 40) {
-                    producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), StringUtils.join("%", agglomeratedData)));
+                    producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), Joiner.on("%").join(agglomeratedData)));
                     agglomeratedData = new ArrayList<String>();
                 }
             }
             if (agglomeratedData.size() > 0) {
-                producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), StringUtils.join("%", agglomeratedData)));
+                producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), Joiner.on("%").join(agglomeratedData)));
             }
 
         } catch (Exception e) {
