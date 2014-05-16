@@ -97,6 +97,7 @@ public class OSMIngest {
         for (String param : ACCUMULO_CONNECTION_PARAMS) {
             dsConf.put(param, cmd.getOptionValue(param));
         }
+        if (dsConf.get(AUTHS) == null) dsConf.put(AUTHS, "");
         return dsConf;
     }
 
