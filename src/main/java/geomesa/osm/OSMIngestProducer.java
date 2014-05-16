@@ -1,32 +1,45 @@
 package geomesa.osm;
 
+import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 import org.apache.commons.cli.*;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 
 public class OSMIngestProducer {
   static String INGEST_FILE = "ingestFile";
   static String ZOOKEEPERS = "zookeepers";
+  static String TOPIC = "topic";
+  static String BROKER_LIST = "brokers";
 
   public static Options getRequiredOptions() {
-    Options options = new Options();
-    Option ingestFileOpt = OptionBuilder.withArgName(INGEST_FILE)
-      .hasArg()
-      .isRequired()
-      .withDescription("ingest csv file")
-      .create(INGEST_FILE);
-    Option zookeepersOpt = OptionBuilder.withArgName(ZOOKEEPERS)
-      .hasArg()
-      .isRequired()
-      .withDescription("zookeepers")
-      .create(ZOOKEEPERS);
-    options.addOption(ingestFileOpt);
-    options.addOption(zookeepersOpt);
-    return options;
+      Options options = new Options();
+      Option ingestFileOpt = OptionBuilder.withArgName(INGEST_FILE)
+          .hasArg()
+          .isRequired()
+          .withDescription("ingest csv file")
+          .create(INGEST_FILE);
+      Option topicOpt = OptionBuilder.withArgName(TOPIC)
+          .hasArg()
+          .isRequired()
+          .withDescription("name of kafka topic")
+          .create(TOPIC);
+      Option brokersOpt = OptionBuilder.withArgName(BROKER_LIST)
+          .hasArg()
+          .isRequired()
+          .withDescription("kafka metadata brokers list")
+          .create(BROKER_LIST);
+      options.addOption(ingestFileOpt);
+      options.addOption(topicOpt);
+      options.addOption(brokersOpt);
+      return options;
   }
 
   public static void main(String[] args) {
@@ -37,21 +50,32 @@ public class OSMIngestProducer {
       Options options = getRequiredOptions();
 
       CommandLine cmd = parser.parse( options, args);
-      final kafka.javaapi.producer.Producer<Integer, String> producer;
-      final String topic = OSMIngest.TOPIC;
+      final kafka.javaapi.producer.Producer<String, String> producer;
+      final String topic = cmd.getOptionValue(TOPIC);
       final Properties props = new Properties();
       props.put("serializer.class", "kafka.serializer.StringEncoder");
-      props.put("metadata.broker.list", "localhost:9092"); //default
-      props.put("zookeeper.connect", cmd.getOptionValue(ZOOKEEPERS));
-      producer = new kafka.javaapi.producer.Producer<Integer, String>(new ProducerConfig(props));
+      props.put("metadata.broker.list", cmd.getOptionValue(BROKER_LIST));
+      props.put("producer.type", "async");
+      producer = new Producer(new ProducerConfig(props));
 
       FileReader fileReader = new FileReader(cmd.getOptionValue(INGEST_FILE));
       BufferedReader bufferedReader = new BufferedReader(fileReader);
-
+      List<String> agglomeratedData = new ArrayList<String>();
+      Random rnd = new Random();
       for (String x = bufferedReader.readLine();
            x != null;
            x = bufferedReader.readLine()) {
-        producer.send(new KeyedMessage<Integer, String>(topic, x));
+
+          //producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), x));
+
+          agglomeratedData.add(x);
+          if (agglomeratedData.size() == 40) {
+              producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), StringUtils.join("%", agglomeratedData)));
+              agglomeratedData = new ArrayList<String>();
+          }
+      }
+      if (agglomeratedData.size() > 0) {
+          producer.send(new KeyedMessage<String, String>(topic, String.valueOf(rnd.nextInt()), StringUtils.join("%", agglomeratedData)));
       }
 
     } catch (Exception e) {
