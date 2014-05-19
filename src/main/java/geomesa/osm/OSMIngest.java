@@ -3,17 +3,13 @@ package geomesa.osm;
 import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
 import backtype.storm.topology.TopologyBuilder;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import org.apache.commons.cli.*;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.DataUtilities;
-import org.geotools.feature.SchemaException;
 import org.opengis.feature.simple.SimpleFeatureType;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class OSMIngest {
@@ -113,7 +109,7 @@ public class OSMIngest {
         Map<String, String> dsConf = getAccumuloDataStoreConf(cmd);
 
         String featureName = cmd.getOptionValue(FEATURE_NAME);
-        SimpleFeatureType featureType = buildOSMFeatureType(featureName);
+        SimpleFeatureType featureType = DataUtilities.createType(featureName, "geom:Point:srid=4326");
 
         DataStore ds = DataStoreFinder.getDataStore(dsConf);
         ds.createSchema(featureType);
@@ -121,26 +117,14 @@ public class OSMIngest {
         String topic = cmd.getOptionValue(TOPIC);
         String groupId = topic;
         dsConf.put(OSMIngest.FEATURE_NAME, featureName);
-        SpoutWithBolts spoutWithBolts = new SpoutWithBolts(dsConf, groupId, topic);
-        topologyBuilder.setSpout("Spout", spoutWithBolts, 10).setNumTasks(10);
-        IngestBolt ingestBolt = new IngestBolt(dsConf, groupId, topic);
-        topologyBuilder.setBolt("Bolt", ingestBolt, 20).shuffleGrouping("Spout");
+        OSMKafkaSpout OSMKafkaSpout = new OSMKafkaSpout(dsConf, groupId, topic);
+        topologyBuilder.setSpout("Spout", OSMKafkaSpout, 10).setNumTasks(10);
+        OSMKafkaBolt OSMKafkaBolt = new OSMKafkaBolt(dsConf, groupId, topic);
+        topologyBuilder.setBolt("Bolt", OSMKafkaBolt, 20).shuffleGrouping("Spout");
         Config stormConf = new Config();
         stormConf.setNumWorkers(10);
         stormConf.setDebug(true);
         StormSubmitter.submitTopology(topic, stormConf, topologyBuilder.createTopology());
-        return 1;
+        return 0;
     }
-
-
-    private static SimpleFeatureType buildOSMFeatureType(String featureName) throws SchemaException {
-        String spec = Joiner.on(",").join(attributes);
-        return DataUtilities.createType(featureName, spec);
-    }
-
-    static final List<String> attributes = Lists.newArrayList(
-        "lat:Integer",
-        "lon:Integer",
-        "*geom:Point:srid=4326"
-    );
 }

@@ -16,14 +16,14 @@ import kafka.utils.VerifiableProperties;
 import java.io.IOException;
 import java.util.*;
 
-public class SpoutWithBolts extends BaseRichSpout {
+public class OSMKafkaSpout extends BaseRichSpout {
     ConsumerIterator<String, String> kafkaIterator = null;
     SpoutOutputCollector _collector = null;
     Map<String, String> conf;
     String groupId;
     String topic;
 
-    public SpoutWithBolts(Map<String, String> conf, String groupId, String topic) throws IOException {
+    public OSMKafkaSpout(Map<String, String> conf, String groupId, String topic) throws IOException {
         this.conf = conf;
         this.groupId = groupId;
         this.topic = topic;

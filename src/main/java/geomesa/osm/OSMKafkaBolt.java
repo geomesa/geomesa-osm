@@ -24,14 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Created with IntelliJ IDEA.
- * User: fhp
- * Date: 5/14/14
- * Time: 2:34 PM
- * To change this template use File | Settings | File Templates.
- */
-public class IngestBolt extends BaseRichBolt {
+public class OSMKafkaBolt extends BaseRichBolt {
     Map<String, String> conf;
     String groupId;
     String topic;
@@ -43,7 +36,7 @@ public class IngestBolt extends BaseRichBolt {
     private static final int LATITUDE_COL_IDX  = 0;
     private static final int LONGITUDE_COL_IDX = 1;
 
-    public IngestBolt(Map<String, String> conf, String groupId, String topic) {
+    public OSMKafkaBolt(Map<String, String> conf, String groupId, String topic) {
         this.conf = conf;
         this.groupId = groupId;
         this.topic = topic;
@@ -71,35 +64,31 @@ public class IngestBolt extends BaseRichBolt {
             featureBuilder = new SimpleFeatureBuilder(featureType);
             featureWriter = ds.getFeatureWriter(featureName, Transaction.AUTO_COMMIT);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Unable to initialize feature writer");
         }
     }
 
     public void execute(Tuple tuple) {
-        final String[] splitter = tuple.getValue(0).toString().split("%");
 
-        for (String split : splitter) {
-            final String[] attributes = split.split(",");
+        final String[] attributes = tuple.getValue(0).toString().split(",");
 
-            // Only ingest attributes that have a latitude and longitude
-            if (attributes.length == 2 && attributes[LATITUDE_COL_IDX] != null && attributes[LONGITUDE_COL_IDX] != null) {
+        // Only ingest attributes that have a latitude and longitude
+        if (attributes.length == 2 && attributes[LATITUDE_COL_IDX] != null && attributes[LONGITUDE_COL_IDX] != null) {
 
-                featureBuilder.reset();
-                featureBuilder.addAll(attributes);
-                final SimpleFeature simpleFeature = featureBuilder.buildFeature(String.valueOf(UUID.randomUUID().getMostSignificantBits()));
+            featureBuilder.reset();
+            final SimpleFeature simpleFeature = featureBuilder.buildFeature(String.valueOf(UUID.randomUUID().getMostSignificantBits()));
 
-                simpleFeature.setDefaultGeometry(getGeometry(attributes));
+            simpleFeature.setDefaultGeometry(getGeometry(attributes));
 
-                try {
-                    final SimpleFeature next = featureWriter.next();
-                    for (int i = 0; i < simpleFeature.getAttributeCount(); i++) {
-                        next.setAttribute(i, simpleFeature.getAttribute(i));
-                    }
-                    ((FeatureIdImpl)next.getIdentifier()).setID(simpleFeature.getID());
-                    featureWriter.write();
-                } catch (IOException e) {
-                    e.printStackTrace();
+            try {
+                final SimpleFeature next = featureWriter.next();
+                for (int i = 0; i < simpleFeature.getAttributeCount(); i++) {
+                    next.setAttribute(i, simpleFeature.getAttribute(i));
                 }
+                ((FeatureIdImpl)next.getIdentifier()).setID(simpleFeature.getID());
+                featureWriter.write();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
