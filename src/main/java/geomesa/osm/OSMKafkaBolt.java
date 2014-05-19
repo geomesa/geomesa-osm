@@ -77,7 +77,6 @@ public class OSMKafkaBolt extends BaseRichBolt {
 
             featureBuilder.reset();
             final SimpleFeature simpleFeature = featureBuilder.buildFeature(String.valueOf(UUID.randomUUID().getMostSignificantBits()));
-
             simpleFeature.setDefaultGeometry(getGeometry(attributes));
 
             try {
