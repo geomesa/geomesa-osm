@@ -9,6 +9,7 @@ import backtype.storm.tuple.Tuple;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import org.apache.log4j.Logger;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.FeatureWriter;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class OSMKafkaBolt extends BaseRichBolt {
+    private static final Logger log = Logger.getLogger(OSMKafkaBolt.class);
     Map<String, String> conf;
     String groupId;
     String topic;
@@ -64,7 +66,7 @@ public class OSMKafkaBolt extends BaseRichBolt {
             featureBuilder = new SimpleFeatureBuilder(featureType);
             featureWriter = ds.getFeatureWriter(featureName, Transaction.AUTO_COMMIT);
         } catch (IOException e) {
-            throw new RuntimeException("Unable to initialize feature writer");
+            throw new RuntimeException("Unable to initialize feature writer", e);
         }
     }
 
@@ -87,7 +89,7 @@ public class OSMKafkaBolt extends BaseRichBolt {
                 ((FeatureIdImpl)next.getIdentifier()).setID(simpleFeature.getID());
                 featureWriter.write();
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Exception writing feature", e);
             }
         }
     }
@@ -98,7 +100,7 @@ public class OSMKafkaBolt extends BaseRichBolt {
             final Double lon = (double)Integer.parseInt(attributes[LONGITUDE_COL_IDX]) / 1e7;
             return geometryFactory.createPoint(new Coordinate(lon, lat));
         } catch (NumberFormatException e) {
-            e.printStackTrace();
+            log.error("Number format exception", e);
         }
         return null;
     }

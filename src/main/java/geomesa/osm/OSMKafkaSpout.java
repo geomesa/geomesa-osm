@@ -12,11 +12,14 @@ import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.serializer.StringDecoder;
 import kafka.utils.VerifiableProperties;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.*;
 
 public class OSMKafkaSpout extends BaseRichSpout {
+
+    private static final Logger log = Logger.getLogger(OSMKafkaSpout.class);
     ConsumerIterator<String, String> kafkaIterator = null;
     SpoutOutputCollector _collector = null;
     Map<String, String> conf;
@@ -58,11 +61,7 @@ public class OSMKafkaSpout extends BaseRichSpout {
         if (streams.size() == 1) {
             stream = streams.get(0);
         } else {
-            try {
-                throw new Exception("Streams should be of size 1");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            log.error("Streams should be of size 1");
         }
         kafkaIterator = stream.iterator();
     }
