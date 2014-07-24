@@ -11,7 +11,7 @@ To ingest:
 
 2. Submit topology
    ```
-   storm jar geomesa-osm-accumulo1.5-1.0.0-SNAPSHOT.jar geomesa.osm.OSMIngest -instanceId [instanceId] -zookeepers [zookeepers] -user [user] -password [password] -auths [auths] -tableName [tableName] -featureName [featureName] -topic [kafka topic name]
+   storm jar geomesa-osm-accumulo1.5-1.0-SNAPSHOT.jar geomesa.osm.OSMIngest -instanceId [instanceId] -zookeepers [zookeepers] -user [user] -password [password] -auths [auths] -tableName [tableName] -featureName [featureName] -topic [kafka topic name]
    ```
 
 3. Create kafka topic
